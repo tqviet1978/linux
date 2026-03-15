@@ -4,7 +4,46 @@
 
 ---
 
-[[_TOC_]]
+## 📋 Mục lục
+
+| # | Chủ đề |
+|---|--------|
+| 1 | [📦 Package Management](#-package-management) |
+| 2 | [🗄️ MySQL / MariaDB](#️-mysql--mariadb) |
+| 3 | [🐘 PostgreSQL](#-postgresql) |
+| 4 | [🔴 Redis](#-redis) |
+| 5 | [🍃 MongoDB](#-mongodb) |
+| 6 | [🔀 Git](#-git) |
+| 7 | [🐳 Docker](#-docker) |
+| 8 | [🌐 Nginx](#-nginx) |
+| 9 | [🔐 SSH](#-ssh) |
+| 10 | [☁️ SSH qua Cloudflare Tunnel](#️-ssh-qua-cloudflare-tunnel) |
+| 11 | [📁 File & Directory](#-file--directory) |
+| 12 | [🔍 Search & View Files](#-search--view-files) |
+| 13 | [⚙️ Process & System](#️-process--system) |
+| 14 | [🌍 Network](#-network) |
+| 15 | [👤 User, Group, Sudo & SELinux](#-user-group-sudo--selinux) |
+| 16 | [🕐 Cron Jobs](#-cron-jobs) |
+| 17 | [🔧 Systemd Service](#-systemd-service) |
+| 18 | [🔥 Firewall (UFW)](#-firewall-ufw) |
+| 19 | [📊 Log Management & Journalctl](#-log-management--journalctl) |
+| 20 | [🔄 Rsync](#-rsync) |
+| 21 | [☁️ Cloudflared (Cloudflare Tunnel)](#️-cloudflared-cloudflare-tunnel) |
+| 22 | [🔁 Rclone](#-rclone) |
+| 23 | [🔒 Tailscale](#-tailscale) |
+| 24 | [🔎 Troubleshoot Port & Process](#-troubleshoot-port--process) |
+| 25 | [🐍 Python & Virtual Environment](#-python--virtual-environment) |
+| 26 | [⚙️ Run Program as a Daemon Service](#️-run-program-as-a-daemon-service-systemd) |
+| 27 | [🔐 SSL/TLS & Certbot](#-ssltls--certbot) |
+| 28 | [🌐 curl Advanced](#-curl-advanced) |
+| 29 | [✂️ Sed & Awk](#️-sed--awk) |
+| 30 | [💾 Disk Management](#-disk-management) |
+| 31 | [📜 Bash Scripting](#-bash-scripting) |
+| 32 | [🔥 iptables](#-iptables) |
+| 33 | [🔍 nmap](#-nmap) |
+| 34 | [📝 Tips & Tricks](#-tips--tricks) |
+| 35 | [🔖 Alias & Function trong `.bashrc`](#-alias--function-trong-bashrc) |
+| 36 | [🟩 NVM & Node.js](#-nvm--nodejs) |
 
 ---
 
