@@ -10,29 +10,67 @@
 # Debian / Ubuntu
 sudo apt update && sudo apt upgrade -y
 sudo apt install <package>
-sudo apt remove <package>
-sudo apt autoremove
+sudo apt remove <package>           # Gỡ package, giữ lại config files
+sudo apt purge <package>            # Gỡ package + xóa luôn config files
+sudo apt purge <package>*           # Gỡ tất cả package liên quan (wildcard)
+sudo apt autoremove                 # Xóa các dependency không còn dùng
+sudo apt autoclean                  # Xóa cache các package cũ đã lỗi thời
+sudo apt clean                      # Xóa toàn bộ cache package đã tải
 
 # RHEL / CentOS / Fedora
 sudo yum update -y
 sudo dnf install <package>
+sudo dnf remove <package>
+sudo dnf autoremove
 ```
 
 ---
 
 ## 🗄️ MySQL / MariaDB
 
+### Kết nối
+
+```bash
+# Đăng nhập với password
+mysql -u root -p
+mariadb -u root -p
+
+# MariaDB không có root password — dùng sudo thay vì nhập password
+sudo mariadb -u root
+sudo mariadb -u root -e "SHOW DATABASES;"    # Chạy lệnh trực tiếp, không vào shell
+
+# Kết nối đến database cụ thể
+sudo mariadb -u root mydb
+mysql -u root -p mydb
+```
+
+### Tạo Database
+
+```bash
+# Tạo database với charset chuẩn (hỗ trợ Unicode, emoji)
+sudo mariadb -u root <<EOF
+CREATE DATABASE IF NOT EXISTS mydb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EOF
+
+# Hoặc vào shell rồi chạy
+sudo mariadb -u root
+> CREATE DATABASE IF NOT EXISTS mydb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+> EXIT;
+```
+
 ### Backup
 
 ```bash
-# Backup all databases
-mysqldump -u root -p --all-databases > all_backup.sql
-
 # Backup a specific database
 mysqldump -u root -p mydb > mydb_backup.sql
+sudo mysqldump -u root mydb > mydb_backup.sql          # MariaDB không có password
 
 # Backup with gzip compression
 mysqldump -u root -p mydb | gzip > mydb_backup_$(date +%F).sql.gz
+sudo mysqldump -u root mydb | gzip > mydb_backup_$(date +%F).sql.gz
+
+# Backup all databases
+mysqldump -u root -p --all-databases > all_backup.sql
 
 # Backup multiple databases
 mysqldump -u root -p --databases db1 db2 db3 > multi_backup.sql
@@ -43,13 +81,24 @@ mysqldump -u root -p --databases db1 db2 db3 > multi_backup.sql
 ```bash
 # Restore from .sql file
 mysql -u root -p mydb < mydb_backup.sql
+sudo mariadb -u root mydb < mydb_backup.sql            # MariaDB không có password
 
-# Restore from .sql file.gz
-gunzip < mydb_backup.sql.gz | mysql -u root -p mydb
+# Restore from .sql.gz — dùng zcat (giữ file gốc)
+zcat mydb_backup.sql.gz | sudo mariadb -u root mydb
+
+# Restore .sql.gz với progress bar (cần cài pv)
+pv mydb_backup.sql.gz | zcat | sudo mariadb -u root mydb
 
 # Restore all databases
 mysql -u root -p < all_backup.sql
+sudo mariadb -u root < all_backup.sql
+
+# Kiểm tra nhanh sau restore
+sudo mariadb -u root -e "SHOW TABLES FROM mydb;" | head -20
+sudo mariadb -u root -e "SELECT COUNT(*) FROM mydb.some_table;"
 ```
+
+> 💡 `pv` hiển thị tốc độ và % tiến trình khi restore file lớn. Cài bằng: `sudo apt install pv`
 
 ### User Management
 
@@ -81,7 +130,241 @@ psql -U postgres -d mydb -h localhost
 
 ---
 
+## 🔴 Redis
+
+### Kết nối & CLI cơ bản
+
+```bash
+# Kết nối redis-cli
+redis-cli                                      # Localhost mặc định
+redis-cli -h 127.0.0.1 -p 6379               # Chỉ định host và port
+redis-cli -h 127.0.0.1 -p 6379 -a password   # Với password
+redis-cli --no-auth-warning -a password       # Ẩn cảnh báo password
+
+# Kiểm tra kết nối
+redis-cli ping                                 # Trả về PONG nếu OK
+
+# Xem thông tin server
+redis-cli info
+redis-cli info memory                          # Chỉ phần memory
+redis-cli info replication                     # Trạng thái master/replica
+```
+
+### Quản lý Keys
+
+```bash
+# Xem keys
+KEYS *                                         # Tất cả keys (tránh dùng trên production lớn)
+KEYS user:*                                    # Keys theo pattern
+SCAN 0 MATCH user:* COUNT 100                 # An toàn hơn KEYS trên production
+
+# Thao tác cơ bản
+SET mykey "hello"
+SET mykey "hello" EX 3600                     # Với TTL 1 giờ (giây)
+GET mykey
+DEL mykey
+EXISTS mykey                                   # 1 nếu tồn tại, 0 nếu không
+TYPE mykey                                     # string / list / hash / set / zset
+TTL mykey                                      # Thời gian sống còn lại (giây), -1 nếu không có TTL
+EXPIRE mykey 3600                              # Đặt TTL cho key đã có
+PERSIST mykey                                  # Xóa TTL — key tồn tại mãi
+
+# Đổi tên / di chuyển
+RENAME oldkey newkey
+MOVE mykey 1                                   # Di chuyển key sang database số 1
+```
+
+### Các kiểu dữ liệu thường dùng
+
+```bash
+# String
+INCR counter                                   # Tăng 1
+INCRBY counter 5                               # Tăng 5
+APPEND mykey " world"
+
+# Hash
+HSET user:1 name "Viet" email "viet@example.com"
+HGET user:1 name
+HGETALL user:1                                 # Lấy toàn bộ field
+HDEL user:1 email
+HEXISTS user:1 name
+
+# List
+LPUSH mylist "a" "b" "c"                       # Thêm vào đầu
+RPUSH mylist "x"                               # Thêm vào cuối
+LRANGE mylist 0 -1                             # Lấy toàn bộ
+LLEN mylist
+
+# Set
+SADD myset "apple" "banana" "cherry"
+SMEMBERS myset
+SISMEMBER myset "apple"                        # Kiểm tra phần tử có trong set không
+SREM myset "banana"
+```
+
+### Flush & Backup
+
+```bash
+# Xóa dữ liệu (cẩn thận!)
+FLUSHDB                                        # Xóa database hiện tại
+FLUSHALL                                       # Xóa toàn bộ tất cả databases
+
+# Backup — tạo snapshot RDB
+redis-cli BGSAVE                               # Backup async, không block
+redis-cli LASTSAVE                             # Unix timestamp lần backup cuối
+# File dump.rdb mặc định tại /var/lib/redis/dump.rdb
+
+# Xem config file đang dùng
+redis-cli CONFIG GET dir                       # Thư mục lưu RDB
+redis-cli CONFIG GET save                      # Cấu hình auto-save
+```
+
+### Service
+
+```bash
+sudo systemctl start redis
+sudo systemctl stop redis
+sudo systemctl restart redis
+sudo systemctl status redis
+sudo systemctl enable redis                    # Auto-start khi boot
+
+# Xem log
+sudo journalctl -u redis -f
+tail -f /var/log/redis/redis-server.log
+```
+
+---
+
+## 🍃 MongoDB
+
+### Kết nối & mongosh
+
+```bash
+# Kết nối
+mongosh                                        # Localhost mặc định
+mongosh "mongodb://localhost:27017"
+mongosh "mongodb://user:password@localhost:27017/mydb"
+mongosh "mongodb://user:password@host:27017/mydb?authSource=admin"
+
+# Kết nối rồi chạy lệnh trực tiếp
+mongosh --eval "db.adminCommand({ ping: 1 })"
+mongosh mydb --eval "db.users.countDocuments()"
+```
+
+### Database & Collection
+
+```bash
+# Trong mongosh shell
+show dbs                                       # Liệt kê tất cả databases
+use mydb                                       # Chuyển sang / tạo database
+db                                             # Xem database hiện tại
+db.dropDatabase()                              # Xóa database hiện tại
+
+show collections                               # Liệt kê collections
+db.createCollection("users")
+db.users.drop()                                # Xóa collection
+db.stats()                                     # Thống kê database
+db.users.stats()                               # Thống kê collection
+```
+
+### CRUD
+
+```bash
+# Insert
+db.users.insertOne({ name: "Viet", email: "viet@example.com", age: 30 })
+db.users.insertMany([{ name: "A" }, { name: "B" }])
+
+# Find / Query
+db.users.find()                                # Tất cả documents
+db.users.find({ age: { $gt: 25 } })           # age > 25
+db.users.find({ name: "Viet" }, { email: 1 }) # Chỉ lấy field email
+db.users.findOne({ name: "Viet" })
+db.users.countDocuments({ age: { $gt: 25 } })
+
+# Update
+db.users.updateOne({ name: "Viet" }, { $set: { age: 31 } })
+db.users.updateMany({ age: { $lt: 18 } }, { $set: { status: "minor" } })
+db.users.replaceOne({ name: "Viet" }, { name: "Viet", age: 31 })  # Thay toàn bộ document
+
+# Delete
+db.users.deleteOne({ name: "Viet" })
+db.users.deleteMany({ status: "inactive" })
+db.users.deleteMany({})                        # Xóa toàn bộ documents (giữ collection)
+```
+
+### Index
+
+```bash
+db.users.createIndex({ email: 1 })            # Index tăng dần
+db.users.createIndex({ email: 1 }, { unique: true })  # Unique index
+db.users.createIndex({ name: 1, age: -1 })    # Compound index
+db.users.getIndexes()                          # Xem danh sách index
+db.users.dropIndex("email_1")                 # Xóa index theo tên
+```
+
+### Backup & Restore
+
+```bash
+# Backup
+mongodump --db mydb --out /backup/mongo/
+mongodump --uri "mongodb://user:pass@localhost/mydb" --out /backup/
+
+# Backup nén
+mongodump --db mydb --archive=/backup/mydb_$(date +%F).gz --gzip
+
+# Restore
+mongorestore --db mydb /backup/mongo/mydb/
+mongorestore --uri "mongodb://user:pass@localhost" /backup/mongo/
+
+# Restore từ file nén
+mongorestore --archive=/backup/mydb_2026-03-15.gz --gzip
+```
+
+### Service & Monitoring
+
+```bash
+sudo systemctl start mongod
+sudo systemctl stop mongod
+sudo systemctl restart mongod
+sudo systemctl status mongod
+sudo systemctl enable mongod                   # Auto-start khi boot
+
+# Xem log
+sudo journalctl -u mongod -f
+tail -f /var/log/mongodb/mongod.log
+
+# Monitoring trong mongosh
+db.serverStatus()                              # Toàn bộ thông tin server
+db.serverStatus().connections                  # Số connections hiện tại
+db.currentOp()                                 # Operations đang chạy
+db.killOp(<opid>)                              # Kill một operation
+```
+
+---
+
 ## 🔀 Git
+
+### Thiết lập username và email
+
+```bash
+# Cấu hình global (áp dụng cho tất cả repo trên máy)
+git config --global user.name "Tran Quoc Viet"
+git config --global user.email "your@email.com"
+
+# Cấu hình local (chỉ áp dụng cho repo hiện tại — override global)
+git config user.name "Tran Quoc Viet"
+git config user.email "work@company.com"
+
+# Kiểm tra cấu hình
+git config --list
+git config user.name
+git config user.email
+
+# Xem file config đang được áp dụng
+git config --list --show-origin
+```
+
+> 💡 Dùng **local config** khi cần tách biệt tài khoản cá nhân và công việc trên cùng một máy.
 
 ### Basics
 
@@ -488,6 +771,13 @@ iostat                                         # Disk I/O
 uptime
 uname -a
 hostname
+
+# Thời gian & múi giờ
+timedatectl                                    # Xem giờ hệ thống, timezone, NTP
+sudo timedatectl set-timezone Asia/Ho_Chi_Minh # Đặt múi giờ Việt Nam
+sudo timedatectl set-ntp true                  # Bật đồng bộ NTP
+timedatectl list-timezones | grep Asia         # Tìm timezone
+date                                           # Xem giờ hiện tại
 ```
 
 ---
@@ -509,7 +799,42 @@ dig example.com
 # Check if port is open
 nc -zv server 3306
 telnet server 22
+
+# Hardware
+lspci                                          # Liệt kê thiết bị PCI (card mạng, GPU...)
+lsusb                                          # Liệt kê thiết bị USB đang kết nối
 ```
+
+### Thiết lập IP tĩnh (Debian/Ubuntu)
+
+```bash
+# Mở file cấu hình mạng
+sudo nano /etc/network/interfaces
+```
+
+Thêm cấu hình IP tĩnh cho interface (thường là `eth0` hoặc `ens3`):
+
+```
+auto eth0
+iface eth0 inet static
+    address 192.168.1.100
+    netmask 255.255.255.0
+    gateway 192.168.1.1
+    dns-nameservers 8.8.8.8 8.8.4.4
+```
+
+```bash
+# Khởi động lại network service
+sudo systemctl restart networking
+# Hoặc trên hệ thống cũ hơn
+sudo /etc/init.d/networking restart
+
+# Kiểm tra IP sau khi cấu hình
+ip addr show eth0
+ip route
+```
+
+> 💡 Trên Ubuntu 18.04+ dùng **Netplan** thay thế: file cấu hình tại `/etc/netplan/*.yaml`, áp dụng bằng `sudo netplan apply`.
 
 ---
 
@@ -1815,6 +2140,120 @@ command 2>&1 | tee output.txt                  # Capture both stdout & stderr
 export MY_VAR="value"
 echo $MY_VAR
 env | grep MY_VAR
+```
+
+---
+
+## 🔖 Alias & Function trong `.bashrc`
+
+Tạo shortcut lệnh để tiết kiệm thời gian gõ.
+
+### Alias — shortcut đơn giản
+
+```bash
+# Mở file .bashrc
+nano ~/.bashrc
+
+# Thêm alias vào cuối file, ví dụ:
+alias ll="ls -lah"
+alias gs="git status"
+alias mm="cd /var/www/myapp"
+alias push="git add --all; git commit -m 'X'; git push"
+
+# Áp dụng ngay mà không cần mở terminal mới
+source ~/.bashrc
+```
+
+### Function — linh hoạt hơn alias, nhận tham số
+
+```bash
+# Thêm vào ~/.bashrc
+function push() {
+    git add --all
+    if [ -z "$1" ]; then
+        git commit -m "X"          # Dùng message mặc định nếu không truyền tham số
+    else
+        git commit -m "$1"
+    fi
+    git push
+}
+
+function mkcd() {
+    mkdir -p "$1" && cd "$1"       # Tạo thư mục rồi vào luôn
+}
+```
+
+```bash
+# Sử dụng
+push                               # Commit với message "X"
+push "fix login bug"               # Commit với message tùy chỉnh
+mkcd /var/www/newproject
+```
+
+> 💡 Alias phù hợp cho lệnh ngắn cố định. Dùng **function** khi cần nhận tham số hoặc có logic điều kiện.
+
+---
+
+## 🟩 NVM & Node.js
+
+### Cài đặt NVM
+
+```bash
+# Cài NVM (Node Version Manager)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+# Áp dụng ngay mà không cần mở terminal mới
+source ~/.bashrc
+# Hoặc: source ~/.zshrc  (nếu dùng zsh)
+
+# Kiểm tra cài đặt
+nvm --version
+```
+
+### Quản lý phiên bản Node
+
+```bash
+# Cài Node.js
+nvm install --lts                  # Cài bản LTS mới nhất (khuyến nghị)
+nvm install 20                     # Cài Node 20.x
+nvm install 18.20.0                # Cài phiên bản cụ thể
+
+# Chuyển đổi phiên bản
+nvm use --lts
+nvm use 20
+nvm use 18.20.0
+
+# Đặt phiên bản mặc định
+nvm alias default 20               # Dùng Node 20 mặc định khi mở terminal mới
+nvm alias default --lts
+
+# Xem các phiên bản đã cài
+nvm ls
+nvm ls-remote --lts                # Xem các bản LTS có thể cài
+
+# Xóa một phiên bản
+nvm uninstall 18.20.0
+```
+
+### npm cơ bản
+
+```bash
+node -v                            # Kiểm tra phiên bản Node
+npm -v                             # Kiểm tra phiên bản npm
+
+npm install                        # Cài dependencies từ package.json
+npm install <package>              # Cài package vào dependencies
+npm install -D <package>           # Cài vào devDependencies
+npm install -g <package>           # Cài global (dùng được ở mọi nơi)
+npm uninstall <package>
+npm update
+
+npm run dev
+npm run build
+npm run start
+
+# Xem các package global đã cài
+npm list -g --depth=0
 ```
 
 ---
