@@ -3,7 +3,9 @@
 > A comprehensive reference of Linux commands commonly used in DevOps workflows.
 
 ---
-[[_TOC]]
+
+[[_TOC_]]
+
 ---
 
 ## 📦 Package Management
