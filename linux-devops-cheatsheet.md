@@ -323,6 +323,112 @@ exit                  # Exit
 
 ---
 
+## ☁️ SSH qua Cloudflare Tunnel
+
+> Kết nối SSH an toàn mà **không cần mở port 22 ra public**, không cần IP tĩnh. Traffic đi qua Cloudflare Tunnel được mã hóa hoàn toàn.
+
+### Kiến trúc
+
+```
+Local Machine  →  cloudflared (proxy)  →  Cloudflare Edge  →  Tunnel  →  Production Server :22
+```
+
+### Phía Production Server — Thêm SSH vào tunnel config
+
+```bash
+# Mở file config tunnel
+sudo nano /etc/cloudflared/config.yml
+```
+
+Thêm SSH ingress rule **trước** catch-all 404:
+
+```yaml
+ingress:
+  - hostname: ssh.production.com
+    service: ssh://localhost:22
+  # ... các rule khác ...
+  - service: http_status:404   # catch-all — phải ở cuối cùng
+```
+
+Restart tunnel để áp dụng:
+
+```bash
+sudo systemctl restart cloudflared
+sudo systemctl status cloudflared   # Kiểm tra tunnel đang chạy
+```
+
+Vào **Cloudflare Dashboard → DNS** tạo record:
+
+```
+Type:     CNAME
+Name:     ssh.production.com
+Target:   <TUNNEL_UUID>.cfargotunnel.com
+Proxy:    Proxied (cam)  ✅
+```
+
+> `TUNNEL_UUID` lấy từ: `cloudflared tunnel list`
+
+---
+
+### Phía Local Machine — Cài cloudflared + config SSH proxy
+
+```bash
+# 1. Cài cloudflared (Ubuntu/Debian)
+curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
+  -o /tmp/cloudflared.deb
+sudo dpkg -i /tmp/cloudflared.deb
+cloudflared --version   # Kiểm tra cài đặt thành công
+
+# 2. (Nếu production server yêu cầu SSH key) Tạo key và copy lên server
+ssh-keygen -t ed25519 -C "your@email.com"   # Tạo key pair tại ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub                   # Copy nội dung này
+
+# Trên production server, paste public key vào authorized_keys của user tương ứng
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+echo "<paste_public_key_here>" >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+# 3. Thêm SSH proxy config (kèm IdentityFile nếu dùng key)
+cat >> ~/.ssh/config << 'EOF'
+
+Host ssh.production.com
+    HostName ssh.production.com
+    User <production_user>
+    IdentityFile ~/.ssh/id_ed25519
+    ProxyCommand cloudflared access ssh --hostname %h
+EOF
+```
+
+SSH bình thường — cloudflared tự xử lý tunnel:
+
+```bash
+ssh ssh.production.com
+
+# Hoặc dùng SCP qua tunnel
+scp file.txt ssh.production.com:/home/<production_user>/
+```
+
+---
+
+### Troubleshooting
+
+```bash
+# Kiểm tra tunnel đang active trên production server
+cloudflared tunnel list
+cloudflared tunnel info <TUNNEL_UUID>
+
+# Xem log tunnel trên production server
+sudo journalctl -u cloudflared -f
+
+# Test thủ công từ local (bỏ qua SSH config)
+cloudflared access ssh --hostname ssh.production.com
+
+# Kiểm tra DNS record đã đúng chưa
+dig ssh.production.com CNAME
+```
+
+---
+
 ## 📁 File & Directory
 
 ```bash
