@@ -522,6 +522,65 @@ git push
 
 > 💡 **Best practice:** always create `.gitignore` before the first `git add .`, and run `git status` to review staged files before committing. GitHub maintains a collection of ready-made `.gitignore` templates at [github.com/github/gitignore](https://github.com/github/gitignore).
 
+### Fix: Accidentally Pushed Sensitive Data
+
+Use this when a file containing secrets (API keys, passwords, private keys, `.env`) has already been pushed to a remote. You must **rewrite git history** to fully remove it.
+
+> ⚠️ **Do this immediately.** Rotate/revoke the exposed credentials first — assume they are already compromised.
+
+**Step 1 — Install git-filter-repo:**
+
+```bash
+pip install git-filter-repo
+```
+
+**Step 2 — Remove the file from entire history:**
+
+```bash
+# Remove a specific file from all commits
+git filter-repo --path config.php --invert-paths
+
+# Remove multiple files at once
+git filter-repo --path .env --path secrets.json --invert-paths
+
+# Remove by pattern (e.g. all .pem files)
+git filter-repo --path-glob '*.pem' --invert-paths
+```
+
+**Step 3 — Re-attach remote and force push:**
+
+```bash
+# filter-repo removes the remote — add it back
+git remote add origin git@github.com:youruser/yourrepo.git
+
+# Verify remote is set correctly
+git remote -v
+# origin  git@github.com:youruser/yourrepo.git (fetch)
+# origin  git@github.com:youruser/yourrepo.git (push)
+
+# Force push rewritten history to all branches and tags
+git push --force --all origin
+git push --force --tags origin
+```
+
+**Step 4 — Verify the file is gone from history:**
+
+```bash
+git log -- config.php                     # Should return no output
+git grep "BEGIN RSA PRIVATE KEY"          # Should return no matches
+git grep "password"                       # Spot-check for other secrets
+```
+
+**Step 5 — Notify all collaborators to re-sync:**
+
+```bash
+# Every other developer must run this — their local history is now outdated
+git fetch origin
+git reset --hard origin/main
+```
+
+> 💡 After force-pushing, also clear the GitHub cache by going to **Settings → Danger Zone → Delete cached views**, or contact GitHub Support if the file still appears in the UI.
+
 ---
 
 ## 🐳 Docker
