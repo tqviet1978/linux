@@ -4,10 +4,10 @@
 
 ---
 
-## 📋 Mục lục
+## 📋 Table of Contents
 
-| # | Chủ đề |
-|---|--------|
+| # | Topic |
+|---|-------|
 | 1 | [📦 Package Management](#-package-management) |
 | 2 | [🗄️ MySQL / MariaDB](#️-mysql--mariadb) |
 | 3 | [🐘 PostgreSQL](#-postgresql) |
@@ -42,7 +42,7 @@
 | 32 | [🔥 iptables](#-iptables) |
 | 33 | [🔍 nmap](#-nmap) |
 | 34 | [📝 Tips & Tricks](#-tips--tricks) |
-| 35 | [🔖 Alias & Function trong `.bashrc`](#-alias--function-trong-bashrc) |
+| 35 | [🔖 Alias & Function in `.bashrc`](#-alias--function-in-bashrc) |
 | 36 | [🟩 NVM & Node.js](#-nvm--nodejs) |
 
 ---
@@ -53,12 +53,12 @@
 # Debian / Ubuntu
 sudo apt update && sudo apt upgrade -y
 sudo apt install <package>
-sudo apt remove <package>           # Gỡ package, giữ lại config files
-sudo apt purge <package>            # Gỡ package + xóa luôn config files
-sudo apt purge <package>*           # Gỡ tất cả package liên quan (wildcard)
-sudo apt autoremove                 # Xóa các dependency không còn dùng
-sudo apt autoclean                  # Xóa cache các package cũ đã lỗi thời
-sudo apt clean                      # Xóa toàn bộ cache package đã tải
+sudo apt remove <package>           # Remove package, keep config files
+sudo apt purge <package>            # Remove package + delete config files
+sudo apt purge <package>*           # Remove all related packages (wildcard)
+sudo apt autoremove                 # Remove unused dependencies
+sudo apt autoclean                  # Remove outdated cached packages
+sudo apt clean                      # Remove all downloaded package cache
 
 # RHEL / CentOS / Fedora
 sudo yum update -y
@@ -71,31 +71,31 @@ sudo dnf autoremove
 
 ## 🗄️ MySQL / MariaDB
 
-### Kết nối
+### Connect
 
 ```bash
-# Đăng nhập với password
+# Login with password
 mysql -u root -p
 mariadb -u root -p
 
-# MariaDB không có root password — dùng sudo thay vì nhập password
+# MariaDB with no root password — use sudo instead of entering password
 sudo mariadb -u root
-sudo mariadb -u root -e "SHOW DATABASES;"    # Chạy lệnh trực tiếp, không vào shell
+sudo mariadb -u root -e "SHOW DATABASES;"    # Run command directly, no shell
 
-# Kết nối đến database cụ thể
+# Connect to a specific database
 sudo mariadb -u root mydb
 mysql -u root -p mydb
 ```
 
-### Tạo Database
+### Create Database
 
 ```bash
-# Tạo database với charset chuẩn (hỗ trợ Unicode, emoji)
+# Create database with standard charset (supports Unicode, emoji)
 sudo mariadb -u root <<EOF
 CREATE DATABASE IF NOT EXISTS mydb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 EOF
 
-# Hoặc vào shell rồi chạy
+# Or enter shell then run
 sudo mariadb -u root
 > CREATE DATABASE IF NOT EXISTS mydb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 > EXIT;
@@ -106,7 +106,7 @@ sudo mariadb -u root
 ```bash
 # Backup a specific database
 mysqldump -u root -p mydb > mydb_backup.sql
-sudo mysqldump -u root mydb > mydb_backup.sql          # MariaDB không có password
+sudo mysqldump -u root mydb > mydb_backup.sql          # MariaDB no password
 
 # Backup with gzip compression
 mysqldump -u root -p mydb | gzip > mydb_backup_$(date +%F).sql.gz
@@ -124,24 +124,24 @@ mysqldump -u root -p --databases db1 db2 db3 > multi_backup.sql
 ```bash
 # Restore from .sql file
 mysql -u root -p mydb < mydb_backup.sql
-sudo mariadb -u root mydb < mydb_backup.sql            # MariaDB không có password
+sudo mariadb -u root mydb < mydb_backup.sql            # MariaDB no password
 
-# Restore from .sql.gz — dùng zcat (giữ file gốc)
+# Restore from .sql.gz — using zcat (keeps original file intact)
 zcat mydb_backup.sql.gz | sudo mariadb -u root mydb
 
-# Restore .sql.gz với progress bar (cần cài pv)
+# Restore .sql.gz with progress bar (requires pv)
 pv mydb_backup.sql.gz | zcat | sudo mariadb -u root mydb
 
 # Restore all databases
 mysql -u root -p < all_backup.sql
 sudo mariadb -u root < all_backup.sql
 
-# Kiểm tra nhanh sau restore
+# Quick check after restore
 sudo mariadb -u root -e "SHOW TABLES FROM mydb;" | head -20
 sudo mariadb -u root -e "SELECT COUNT(*) FROM mydb.some_table;"
 ```
 
-> 💡 `pv` hiển thị tốc độ và % tiến trình khi restore file lớn. Cài bằng: `sudo apt install pv`
+> 💡 `pv` shows transfer speed and progress % when restoring large files. Install: `sudo apt install pv`
 
 ### User Management
 
@@ -175,91 +175,91 @@ psql -U postgres -d mydb -h localhost
 
 ## 🔴 Redis
 
-### Kết nối & CLI cơ bản
+### Connect & CLI Basics
 
 ```bash
-# Kết nối redis-cli
-redis-cli                                      # Localhost mặc định
-redis-cli -h 127.0.0.1 -p 6379               # Chỉ định host và port
-redis-cli -h 127.0.0.1 -p 6379 -a password   # Với password
-redis-cli --no-auth-warning -a password       # Ẩn cảnh báo password
+# Connect redis-cli
+redis-cli                                      # Localhost default
+redis-cli -h 127.0.0.1 -p 6379               # Specify host and port
+redis-cli -h 127.0.0.1 -p 6379 -a password   # With password
+redis-cli --no-auth-warning -a password       # Suppress password warning
 
-# Kiểm tra kết nối
-redis-cli ping                                 # Trả về PONG nếu OK
+# Test connection
+redis-cli ping                                 # Returns PONG if OK
 
-# Xem thông tin server
+# Server info
 redis-cli info
-redis-cli info memory                          # Chỉ phần memory
-redis-cli info replication                     # Trạng thái master/replica
+redis-cli info memory                          # Memory section only
+redis-cli info replication                     # Master/replica status
 ```
 
-### Quản lý Keys
+### Key Management
 
 ```bash
-# Xem keys
-KEYS *                                         # Tất cả keys (tránh dùng trên production lớn)
-KEYS user:*                                    # Keys theo pattern
-SCAN 0 MATCH user:* COUNT 100                 # An toàn hơn KEYS trên production
+# List keys
+KEYS *                                         # All keys (avoid on large production)
+KEYS user:*                                    # Keys matching pattern
+SCAN 0 MATCH user:* COUNT 100                 # Safer alternative to KEYS in production
 
-# Thao tác cơ bản
+# Basic operations
 SET mykey "hello"
-SET mykey "hello" EX 3600                     # Với TTL 1 giờ (giây)
+SET mykey "hello" EX 3600                     # With TTL of 1 hour (seconds)
 GET mykey
 DEL mykey
-EXISTS mykey                                   # 1 nếu tồn tại, 0 nếu không
+EXISTS mykey                                   # Returns 1 if exists, 0 if not
 TYPE mykey                                     # string / list / hash / set / zset
-TTL mykey                                      # Thời gian sống còn lại (giây), -1 nếu không có TTL
-EXPIRE mykey 3600                              # Đặt TTL cho key đã có
-PERSIST mykey                                  # Xóa TTL — key tồn tại mãi
+TTL mykey                                      # Remaining lifetime (seconds), -1 if no TTL
+EXPIRE mykey 3600                              # Set TTL on existing key
+PERSIST mykey                                  # Remove TTL — key lives forever
 
-# Đổi tên / di chuyển
+# Rename / move
 RENAME oldkey newkey
-MOVE mykey 1                                   # Di chuyển key sang database số 1
+MOVE mykey 1                                   # Move key to database 1
 ```
 
-### Các kiểu dữ liệu thường dùng
+### Common Data Types
 
 ```bash
 # String
-INCR counter                                   # Tăng 1
-INCRBY counter 5                               # Tăng 5
+INCR counter                                   # Increment by 1
+INCRBY counter 5                               # Increment by 5
 APPEND mykey " world"
 
 # Hash
 HSET user:1 name "Viet" email "viet@example.com"
 HGET user:1 name
-HGETALL user:1                                 # Lấy toàn bộ field
+HGETALL user:1                                 # Get all fields
 HDEL user:1 email
 HEXISTS user:1 name
 
 # List
-LPUSH mylist "a" "b" "c"                       # Thêm vào đầu
-RPUSH mylist "x"                               # Thêm vào cuối
-LRANGE mylist 0 -1                             # Lấy toàn bộ
+LPUSH mylist "a" "b" "c"                       # Push to head
+RPUSH mylist "x"                               # Push to tail
+LRANGE mylist 0 -1                             # Get all elements
 LLEN mylist
 
 # Set
 SADD myset "apple" "banana" "cherry"
 SMEMBERS myset
-SISMEMBER myset "apple"                        # Kiểm tra phần tử có trong set không
+SISMEMBER myset "apple"                        # Check if element exists in set
 SREM myset "banana"
 ```
 
 ### Flush & Backup
 
 ```bash
-# Xóa dữ liệu (cẩn thận!)
-FLUSHDB                                        # Xóa database hiện tại
-FLUSHALL                                       # Xóa toàn bộ tất cả databases
+# Delete data (be careful!)
+FLUSHDB                                        # Flush current database
+FLUSHALL                                       # Flush all databases
 
-# Backup — tạo snapshot RDB
-redis-cli BGSAVE                               # Backup async, không block
-redis-cli LASTSAVE                             # Unix timestamp lần backup cuối
-# File dump.rdb mặc định tại /var/lib/redis/dump.rdb
+# Backup — create RDB snapshot
+redis-cli BGSAVE                               # Async backup, non-blocking
+redis-cli LASTSAVE                             # Unix timestamp of last backup
+# Default dump.rdb location: /var/lib/redis/dump.rdb
 
-# Xem config file đang dùng
-redis-cli CONFIG GET dir                       # Thư mục lưu RDB
-redis-cli CONFIG GET save                      # Cấu hình auto-save
+# View current config
+redis-cli CONFIG GET dir                       # RDB storage directory
+redis-cli CONFIG GET save                      # Auto-save configuration
 ```
 
 ### Service
@@ -269,9 +269,9 @@ sudo systemctl start redis
 sudo systemctl stop redis
 sudo systemctl restart redis
 sudo systemctl status redis
-sudo systemctl enable redis                    # Auto-start khi boot
+sudo systemctl enable redis                    # Auto-start on boot
 
-# Xem log
+# View logs
 sudo journalctl -u redis -f
 tail -f /var/log/redis/redis-server.log
 ```
@@ -280,16 +280,16 @@ tail -f /var/log/redis/redis-server.log
 
 ## 🍃 MongoDB
 
-### Kết nối & mongosh
+### Connect & mongosh
 
 ```bash
-# Kết nối
-mongosh                                        # Localhost mặc định
+# Connect
+mongosh                                        # Localhost default
 mongosh "mongodb://localhost:27017"
 mongosh "mongodb://user:password@localhost:27017/mydb"
 mongosh "mongodb://user:password@host:27017/mydb?authSource=admin"
 
-# Kết nối rồi chạy lệnh trực tiếp
+# Connect and run command directly
 mongosh --eval "db.adminCommand({ ping: 1 })"
 mongosh mydb --eval "db.users.countDocuments()"
 ```
@@ -297,17 +297,17 @@ mongosh mydb --eval "db.users.countDocuments()"
 ### Database & Collection
 
 ```bash
-# Trong mongosh shell
-show dbs                                       # Liệt kê tất cả databases
-use mydb                                       # Chuyển sang / tạo database
-db                                             # Xem database hiện tại
-db.dropDatabase()                              # Xóa database hiện tại
+# Inside mongosh shell
+show dbs                                       # List all databases
+use mydb                                       # Switch to / create database
+db                                             # Show current database
+db.dropDatabase()                              # Drop current database
 
-show collections                               # Liệt kê collections
+show collections                               # List collections
 db.createCollection("users")
-db.users.drop()                                # Xóa collection
-db.stats()                                     # Thống kê database
-db.users.stats()                               # Thống kê collection
+db.users.drop()                                # Drop collection
+db.stats()                                     # Database statistics
+db.users.stats()                               # Collection statistics
 ```
 
 ### CRUD
@@ -318,31 +318,31 @@ db.users.insertOne({ name: "Viet", email: "viet@example.com", age: 30 })
 db.users.insertMany([{ name: "A" }, { name: "B" }])
 
 # Find / Query
-db.users.find()                                # Tất cả documents
+db.users.find()                                # All documents
 db.users.find({ age: { $gt: 25 } })           # age > 25
-db.users.find({ name: "Viet" }, { email: 1 }) # Chỉ lấy field email
+db.users.find({ name: "Viet" }, { email: 1 }) # Return email field only
 db.users.findOne({ name: "Viet" })
 db.users.countDocuments({ age: { $gt: 25 } })
 
 # Update
 db.users.updateOne({ name: "Viet" }, { $set: { age: 31 } })
 db.users.updateMany({ age: { $lt: 18 } }, { $set: { status: "minor" } })
-db.users.replaceOne({ name: "Viet" }, { name: "Viet", age: 31 })  # Thay toàn bộ document
+db.users.replaceOne({ name: "Viet" }, { name: "Viet", age: 31 })  # Replace entire document
 
 # Delete
 db.users.deleteOne({ name: "Viet" })
 db.users.deleteMany({ status: "inactive" })
-db.users.deleteMany({})                        # Xóa toàn bộ documents (giữ collection)
+db.users.deleteMany({})                        # Delete all documents (keeps collection)
 ```
 
 ### Index
 
 ```bash
-db.users.createIndex({ email: 1 })            # Index tăng dần
+db.users.createIndex({ email: 1 })            # Ascending index
 db.users.createIndex({ email: 1 }, { unique: true })  # Unique index
 db.users.createIndex({ name: 1, age: -1 })    # Compound index
-db.users.getIndexes()                          # Xem danh sách index
-db.users.dropIndex("email_1")                 # Xóa index theo tên
+db.users.getIndexes()                          # List all indexes
+db.users.dropIndex("email_1")                 # Drop index by name
 ```
 
 ### Backup & Restore
@@ -352,14 +352,14 @@ db.users.dropIndex("email_1")                 # Xóa index theo tên
 mongodump --db mydb --out /backup/mongo/
 mongodump --uri "mongodb://user:pass@localhost/mydb" --out /backup/
 
-# Backup nén
+# Compressed backup
 mongodump --db mydb --archive=/backup/mydb_$(date +%F).gz --gzip
 
 # Restore
 mongorestore --db mydb /backup/mongo/mydb/
 mongorestore --uri "mongodb://user:pass@localhost" /backup/mongo/
 
-# Restore từ file nén
+# Restore from compressed archive
 mongorestore --archive=/backup/mydb_2026-03-15.gz --gzip
 ```
 
@@ -370,44 +370,75 @@ sudo systemctl start mongod
 sudo systemctl stop mongod
 sudo systemctl restart mongod
 sudo systemctl status mongod
-sudo systemctl enable mongod                   # Auto-start khi boot
+sudo systemctl enable mongod                   # Auto-start on boot
 
-# Xem log
+# View logs
 sudo journalctl -u mongod -f
 tail -f /var/log/mongodb/mongod.log
 
-# Monitoring trong mongosh
-db.serverStatus()                              # Toàn bộ thông tin server
-db.serverStatus().connections                  # Số connections hiện tại
-db.currentOp()                                 # Operations đang chạy
-db.killOp(<opid>)                              # Kill một operation
+# Monitoring inside mongosh
+db.serverStatus()                              # Full server info
+db.serverStatus().connections                  # Current connection count
+db.currentOp()                                 # Currently running operations
+db.killOp(<opid>)                              # Kill an operation
 ```
 
 ---
 
 ## 🔀 Git
 
-### Thiết lập username và email
+### Configure Username & Email
 
 ```bash
-# Cấu hình global (áp dụng cho tất cả repo trên máy)
+# Global config (applies to all repos on this machine)
 git config --global user.name "Tran Quoc Viet"
 git config --global user.email "your@email.com"
 
-# Cấu hình local (chỉ áp dụng cho repo hiện tại — override global)
+# Local config (current repo only — overrides global)
 git config user.name "Tran Quoc Viet"
 git config user.email "work@company.com"
 
-# Kiểm tra cấu hình
+# Check config
 git config --list
 git config user.name
 git config user.email
 
-# Xem file config đang được áp dụng
+# Show which file each config value comes from
 git config --list --show-origin
 ```
 
-> 💡 Dùng **local config** khi cần tách biệt tài khoản cá nhân và công việc trên cùng một máy.
+> 💡 Use **local config** to separate personal and work accounts on the same machine.
+
+### Initialize a new repo and push to remote
+
+```bash
+echo "# my-project" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/<user>/<repo>.git
+git push -u origin main
+```
+
+### Connect an existing local repo to remote
+
+```bash
+git remote add origin https://github.com/<user>/<repo>.git
+git branch -M main
+git push -u origin main
+```
+
+> 💡 `-u` sets the upstream so future `git push` / `git pull` work without specifying the remote and branch.
+
+### Manage remotes
+
+```bash
+git remote -v                                    # List remotes
+git remote add origin <url>                      # Add remote
+git remote set-url origin <new-url>              # Change remote URL
+git remote remove origin                         # Remove remote
+```
 
 ### Basics
 
@@ -452,6 +483,44 @@ git tag -a v1.0.0 -m "Release 1.0.0"
 git push origin v1.0.0
 git push origin --tags
 ```
+
+### Fix: Accidentally Committed Files
+
+Use this when you've committed files that should be ignored (e.g. `__pycache__`, `.env`, build artifacts, editor config).
+
+**Step 1 — Remove from git tracking (keep files locally):**
+
+```bash
+# Remove specific paths
+git rm -r --cached src/__pycache__ tests/__pycache__ src/myapp.egg-info
+
+# Or remove all tracked files that match .gitignore rules (after updating .gitignore)
+git rm -r --cached .
+git add .
+```
+
+**Step 2 — Add to `.gitignore`:**
+
+```bash
+# Python
+echo -e "__pycache__/\n*.pyc\n*.pyo\n*.egg-info/\ndist/\nbuild/\n.eggs/" >> .gitignore
+
+# Node.js
+echo -e "node_modules/\ndist/\n.env\n*.log" >> .gitignore
+
+# General
+echo -e ".env\n.DS_Store\n*.log\n.idea/\n.vscode/" >> .gitignore
+```
+
+**Step 3 — Commit the fix:**
+
+```bash
+git add .gitignore
+git commit -m "remove tracked build artifacts, update .gitignore"
+git push
+```
+
+> 💡 **Best practice:** always create `.gitignore` before the first `git add .`, and run `git status` to review staged files before committing. GitHub maintains a collection of ready-made `.gitignore` templates at [github.com/github/gitignore](https://github.com/github/gitignore).
 
 ---
 
@@ -649,72 +718,72 @@ exit                  # Exit
 
 ---
 
-## ☁️ SSH qua Cloudflare Tunnel
+## ☁️ SSH via Cloudflare Tunnel
 
-> Kết nối SSH an toàn mà **không cần mở port 22 ra public**, không cần IP tĩnh. Traffic đi qua Cloudflare Tunnel được mã hóa hoàn toàn.
+> Secure SSH access **without exposing port 22 to the public**, no static IP required. All traffic through Cloudflare Tunnel is fully encrypted.
 
-### Kiến trúc
+### Architecture
 
 ```
 Local Machine  →  cloudflared (proxy)  →  Cloudflare Edge  →  Tunnel  →  Production Server :22
 ```
 
-### Phía Production Server — Thêm SSH vào tunnel config
+### Production Server — Add SSH to tunnel config
 
 ```bash
-# Mở file config tunnel
+# Open tunnel config file
 sudo nano /etc/cloudflared/config.yml
 ```
 
-Thêm SSH ingress rule **trước** catch-all 404:
+Add SSH ingress rule **before** the catch-all 404:
 
 ```yaml
 ingress:
   - hostname: ssh.production.com
     service: ssh://localhost:22
-  # ... các rule khác ...
-  - service: http_status:404   # catch-all — phải ở cuối cùng
+  # ... other rules ...
+  - service: http_status:404   # catch-all — must be last
 ```
 
-Restart tunnel để áp dụng:
+Restart tunnel to apply:
 
 ```bash
 sudo systemctl restart cloudflared
-sudo systemctl status cloudflared   # Kiểm tra tunnel đang chạy
+sudo systemctl status cloudflared   # Verify tunnel is running
 ```
 
-Vào **Cloudflare Dashboard → DNS** tạo record:
+Go to **Cloudflare Dashboard → DNS** and create a record:
 
 ```
 Type:     CNAME
 Name:     ssh.production.com
 Target:   <TUNNEL_UUID>.cfargotunnel.com
-Proxy:    Proxied (cam)  ✅
+Proxy:    Proxied (orange)  ✅
 ```
 
-> `TUNNEL_UUID` lấy từ: `cloudflared tunnel list`
+> Get `TUNNEL_UUID` from: `cloudflared tunnel list`
 
 ---
 
-### Phía Local Machine — Cài cloudflared + config SSH proxy
+### Local Machine — Install cloudflared + configure SSH proxy
 
 ```bash
-# 1. Cài cloudflared (Ubuntu/Debian)
+# 1. Install cloudflared (Ubuntu/Debian)
 curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
   -o /tmp/cloudflared.deb
 sudo dpkg -i /tmp/cloudflared.deb
-cloudflared --version   # Kiểm tra cài đặt thành công
+cloudflared --version   # Verify installation
 
-# 2. (Nếu production server yêu cầu SSH key) Tạo key và copy lên server
-ssh-keygen -t ed25519 -C "your@email.com"   # Tạo key pair tại ~/.ssh/id_ed25519
-cat ~/.ssh/id_ed25519.pub                   # Copy nội dung này
+# 2. (If production server requires SSH key) Generate key and copy to server
+ssh-keygen -t ed25519 -C "your@email.com"   # Creates key pair at ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub                   # Copy this output
 
-# Trên production server, paste public key vào authorized_keys của user tương ứng
+# On production server, paste public key into authorized_keys for the target user
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 echo "<paste_public_key_here>" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 
-# 3. Thêm SSH proxy config (kèm IdentityFile nếu dùng key)
+# 3. Add SSH proxy config (with IdentityFile if using key auth)
 cat >> ~/.ssh/config << 'EOF'
 
 Host ssh.production.com
@@ -725,12 +794,12 @@ Host ssh.production.com
 EOF
 ```
 
-SSH bình thường — cloudflared tự xử lý tunnel:
+SSH normally — cloudflared handles the tunnel automatically:
 
 ```bash
 ssh ssh.production.com
 
-# Hoặc dùng SCP qua tunnel
+# Or use SCP over the tunnel
 scp file.txt ssh.production.com:/home/<production_user>/
 ```
 
@@ -739,17 +808,17 @@ scp file.txt ssh.production.com:/home/<production_user>/
 ### Troubleshooting
 
 ```bash
-# Kiểm tra tunnel đang active trên production server
+# Check tunnel is active on production server
 cloudflared tunnel list
 cloudflared tunnel info <TUNNEL_UUID>
 
-# Xem log tunnel trên production server
+# View tunnel logs on production server
 sudo journalctl -u cloudflared -f
 
-# Test thủ công từ local (bỏ qua SSH config)
+# Manually test from local (bypassing SSH config)
 cloudflared access ssh --hostname ssh.production.com
 
-# Kiểm tra DNS record đã đúng chưa
+# Verify DNS record is correct
 dig ssh.production.com CNAME
 ```
 
@@ -815,12 +884,12 @@ uptime
 uname -a
 hostname
 
-# Thời gian & múi giờ
-timedatectl                                    # Xem giờ hệ thống, timezone, NTP
-sudo timedatectl set-timezone Asia/Ho_Chi_Minh # Đặt múi giờ Việt Nam
-sudo timedatectl set-ntp true                  # Bật đồng bộ NTP
-timedatectl list-timezones | grep Asia         # Tìm timezone
-date                                           # Xem giờ hiện tại
+# Time & timezone
+timedatectl                                    # Show system time, timezone, NTP status
+sudo timedatectl set-timezone Asia/Ho_Chi_Minh # Set timezone to Vietnam
+sudo timedatectl set-ntp true                  # Enable NTP sync
+timedatectl list-timezones | grep Asia         # Search available timezones
+date                                           # Show current date and time
 ```
 
 ---
@@ -844,18 +913,18 @@ nc -zv server 3306
 telnet server 22
 
 # Hardware
-lspci                                          # Liệt kê thiết bị PCI (card mạng, GPU...)
-lsusb                                          # Liệt kê thiết bị USB đang kết nối
+lspci                                          # List PCI devices (network cards, GPU...)
+lsusb                                          # List connected USB devices
 ```
 
-### Thiết lập IP tĩnh (Debian/Ubuntu)
+### Static IP Setup (Debian/Ubuntu)
 
 ```bash
-# Mở file cấu hình mạng
+# Open network config file
 sudo nano /etc/network/interfaces
 ```
 
-Thêm cấu hình IP tĩnh cho interface (thường là `eth0` hoặc `ens3`):
+Add static IP config for the interface (typically `eth0` or `ens3`):
 
 ```
 auto eth0
@@ -867,17 +936,17 @@ iface eth0 inet static
 ```
 
 ```bash
-# Khởi động lại network service
+# Restart network service
 sudo systemctl restart networking
-# Hoặc trên hệ thống cũ hơn
+# Or on older systems
 sudo /etc/init.d/networking restart
 
-# Kiểm tra IP sau khi cấu hình
+# Verify IP after configuring
 ip addr show eth0
 ip route
 ```
 
-> 💡 Trên Ubuntu 18.04+ dùng **Netplan** thay thế: file cấu hình tại `/etc/netplan/*.yaml`, áp dụng bằng `sudo netplan apply`.
+> 💡 On Ubuntu 18.04+, use **Netplan** instead: config file at `/etc/netplan/*.yaml`, apply with `sudo netplan apply`.
 
 ---
 
@@ -1802,7 +1871,7 @@ curl -O https://example.com/file1.zip \
 
 ## ✂️ Sed & Awk
 
-### Sed — Tìm & thay thế trong file/stream
+### Sed — Find & Replace in files/streams
 
 ```bash
 # Replace text
